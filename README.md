@@ -4,6 +4,9 @@
 
 ### Self-play on self-chosen tasks, skills withdrawn once internalized, zero skills at deployment
 
+<a href="https://huggingface.co/beita6969/R2Orch-9b"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-FFD21E" alt="Hugging Face model R2Orch-9b"></a>
+<a href="https://huggingface.co/datasets/beita6969/R2Orch-Dataset"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-FFD21E" alt="Hugging Face dataset R2Orch-Dataset"></a>
+
 <img src="figs/figure1.png" alt="R²Orch overview" width="60%">
 
 </div>
