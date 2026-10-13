@@ -1,0 +1,103 @@
+{
+ "builder": {
+  "path": "scripts/r2orch/build_ood.py",
+  "sha256": "27774558d0b9d0fa4a075454192401135759ee8789017414ee52a31bfd3397a0"
+ },
+ "selection": "per benchmark, the first 128 candidates by ascending sha256('test:<benchmark>:<source_id>')",
+ "posed_as": "each benchmark is posed as one IID task type (dataset key of configs/r2orch.toml)",
+ "benchmarks": {
+  "triviaqa": {
+   "posed_as": "nq_open",
+   "file": "triviaqa.jsonl",
+   "rows": 128,
+   "sha256": "b2cb0cd62c8d6c65fbf7ff742c9f436034f7b8b19a59a32c6e70b9146eab0da9",
+   "raw": {
+    "file": "triviaqa_rc_nocontext_validation.parquet",
+    "sha256": "48a5005c0eb4f8a4ae5b9868644297fd5bf1e694aeb3dc9c8ab958cac0d5b201",
+    "source": "https://huggingface.co/datasets/mandarjoshi/trivia_qa/blob/0f7faf33a3908546c6fd5b73a660e0f8ff173c2f/rc.nocontext/validation-00000-of-00001.parquet",
+    "rows": 17944
+   },
+   "candidates": "9958 unique question_id (the rc split repeats questions of its web and wikipedia parts; qz_4576 and bb_956 have conflicting duplicates and are excluded)",
+   "answer": "answer = answers = normalized_value followed by the normalized_aliases, deduplicated"
+  },
+  "musique": {
+   "posed_as": "hotpotqa",
+   "file": "musique.jsonl",
+   "rows": 128,
+   "sha256": "40dfa1a25f900144add66699de82369903e97bcfe02e3160b75fd13cdc1be4bb",
+   "raw": {
+    "file": "musique_validation.parquet",
+    "sha256": "2d671592a7674a0920d2a595df2e13acd74c8a80997f763ca81484a273f8adfe",
+    "source": "https://huggingface.co/datasets/dgslibisey/MuSiQue/blob/1bd32e8b3f4f29a11f8240a9f666ef52e159c24e/default/validation/0000.parquet",
+    "rows": 2417,
+    "upstream": "musique_ans_v1.0_dev (MuSiQue-Ans v1.0 dev)"
+   },
+   "candidates": "2417 (all answerable)",
+   "answer": "answer = gold answer string; answers = gold answer followed by answer_aliases"
+  },
+  "math_hard": {
+   "posed_as": "aime",
+   "file": "math_hard.jsonl",
+   "rows": 128,
+   "sha256": "35dc246ccca837f6245e6fb5d0a930fb52933b8cb5e870ed0200caf52ace28b1",
+   "raw": {
+    "file": "math_hard_test.parquet",
+    "sha256": "90ba4ce7f108cd511c8eb716ea7ca906d5dc1621f5e804565765a368ca02ab01",
+    "source": "https://huggingface.co/datasets/lighteval/MATH-Hard/blob/69bc17a93d6754e3c3a22084a58f6ad2c24f1f07/default/test/0000.parquet",
+    "rows": 1324,
+    "upstream": "MATH test, Level 5, concatenated in alphabetical subject order"
+   },
+   "candidates": "1324 (all Level 5); source_id = <subject>_<index within the subject file>",
+   "answer": "answer = content of the last \\boxed{} of the reference solution"
+  },
+  "gpqa_diamond": {
+   "posed_as": "medqa",
+   "file": "gpqa_diamond.ids.json",
+   "rows": 128,
+   "sha256": "816c68c1d21a0a6ba086a2fdc05a3483e4e7ecb8073ebd9be09d48eaec753a03",
+   "raw": {
+    "file": "gpqa_diamond.csv",
+    "sha256": "41d1213cd7a4998605a26c2798500652572007161b3a92817ba46b35befcd305",
+    "rows": 198,
+    "source": "https://huggingface.co/datasets/Idavidrein/gpqa/blob/83022cefff930aea54f654c0b282e74b9eeda5c6/gpqa_diamond.csv (gated: accept the terms and download it yourself)"
+   },
+   "answer": "answer = letter of the correct option after the per-record option permutation; the questions are not redistributed"
+  },
+  "swe_bench_verified": {
+   "posed_as": "mbppplus",
+   "file": "swe_bench_verified.jsonl",
+   "rows": 128,
+   "sha256": "1871b15848047f3be1631b134606f58a46ad5b608af5859cd413216dc59e0743",
+   "raw": {
+    "file": "swe_bench_verified_test.parquet",
+    "sha256": "a45b1fe4e2f0c8390b2b2938ac83e92ed5979000856808f3679c07812e9e6dcd",
+    "source": "https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified/blob/c104f840cc67f8b6eec6f759ebc8b2693d585d4a/data/test-00000-of-00001.parquet",
+    "rows": 500
+   },
+   "candidates": "500 instances; rows hold instance id, repository and base commit",
+   "answer": "resolved by the SWE-Bench harness",
+   "rebuilt_from_raw": true
+  },
+  "webshop": {
+   "posed_as": "alfworld",
+   "file": "webshop.jsonl",
+   "rows": 128,
+   "sha256": "fe5d7314588efaf95251ee42733d4cbd4739e1366800ddd6828cbf932ee4d673",
+   "raw": [
+    {
+     "file": "webshop_items_human_ins.json",
+     "sha256": "cf78667548a71786e1d9049c24b802e48e1084ad4bb021cae56ce1f6d96954a3",
+     "source": "https://huggingface.co/datasets/YWZBrandon/webshop-data/blob/ce990fff5aee388db2706f07820c578ab68e0453/items_human_ins.json"
+    },
+    {
+     "file": "webshop_items_shuffle.json",
+     "sha256": "2ef591d65df3af89e972ab72468eb82cbf124d876552d9f3678667edd620a6c8",
+     "size_bytes": 5479720229,
+     "source": "https://huggingface.co/datasets/YWZBrandon/webshop-data/blob/ce990fff5aee388db2706f07820c578ab68e0453/items_shuffle.json"
+    }
+   ],
+   "candidates": "official human goals (12,087 after dropping goals without instruction attributes), shuffled with seed 233; the test range is the first 500",
+   "answer": "reward of the WebShop environment"
+  }
+ }
+}

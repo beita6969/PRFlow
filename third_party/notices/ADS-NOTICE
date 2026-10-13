@@ -1,0 +1,33 @@
+ADS — Adaptive Data Scheduling for data-efficient LLM reinforcement learning
+Copyright 2026 The ADS Authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+------------------------------------------------------------------------------
+This repository builds on and redistributes (in modified form) third-party
+software:
+
+1. verl (Volcano Engine Reinforcement Learning for LLMs)
+   https://github.com/volcengine/verl
+   Copyright 2023-2024 Bytedance Ltd. and/or its affiliates
+   Licensed under the Apache License, Version 2.0.
+
+   A trimmed copy of verl is vendored under `verl/`. The following files were
+   added or modified by the ADS authors:
+     - verl/verl/experimental/dataset/ads_sampler.py        (added)
+     - verl/verl/experimental/dataset/__init__.py           (modified)
+     - verl/verl/trainer/ppo/ray_trainer.py                 (modified)
+     - verl/verl/workers/config/rollout.py                  (modified)
+     - verl/examples/grpo_trainer/train_ads.sh              (added)
+     - verl/examples/grpo_trainer/reward_boxed_binary.py    (added)
+
+------------------------------------------------------------------------------
+Models and datasets are NOT distributed with this repository. The example
+pipeline and training script reference:
+
+  - Base model:  RoadQAQ/Qwen2.5-Math-1.5B-16k-think
+                 https://huggingface.co/RoadQAQ/Qwen2.5-Math-1.5B-16k-think
+  - Eval data:   HuggingFaceH4/MATH-500, HuggingFaceH4/aime_2024,
+                 HuggingFaceH4/aime_2025
+
+Please consult the respective licenses/terms of these artifacts before use.

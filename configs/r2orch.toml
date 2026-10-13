@@ -1,0 +1,332 @@
+# R2Orch: configuration of the full system (Recursive Self-Play Orchestration with Recursive Learnability
+# and Skill Withdrawal) on the six in-distribution datasets.
+#
+# Every model is the same local Qwen3.5-9B: the frozen base serves the Workers and the skill reviewer, and two
+# LoRA adapters (Proposer, Director) are trained and hot-loaded into the same vLLM service after every update.
+# No external API is called.
+#
+# Placeholders, replaced by scripts/r2orch/render_config.py:
+#   @RUN_ROOT@   the run directory (--run-root)
+#   @DATA_ROOT@  data, models and runs (--data-root or $R2ORCH_DATA_ROOT); expected layout in README.md
+#   @CODE_ROOT@  this repository
+# render_config.py also rewrites the GPU fields of [resources] and [r2orch.serving] for the chosen layout.
+
+[r2orch]
+base_seed = 0
+datasets_enabled = ["aime", "hotpotqa", "nq_open", "medqa", "mbppplus", "alfworld"]
+
+[r2orch.datasets.aime]
+task_type = "math"
+verifier = "integer_answer"
+adapter = "aime"
+stateful = false
+
+[r2orch.datasets.hotpotqa]
+task_type = "multi_hop_qa"
+verifier = "qa_exact_match"
+adapter = "retrieval_qa"
+stateful = false
+
+[r2orch.datasets.nq_open]
+task_type = "factual_qa"
+verifier = "qa_exact_match"
+adapter = "retrieval_qa"
+stateful = false
+
+[r2orch.datasets.medqa]
+task_type = "medical_mcq"
+verifier = "letter_choice"
+adapter = "retrieval_qa"
+stateful = false
+
+[r2orch.datasets.mbppplus]
+task_type = "code_function"
+verifier = "mbppplus_tests"
+adapter = "mbppplus"
+stateful = false
+
+[r2orch.datasets.alfworld]
+task_type = "alfworld"
+verifier = "alfworld_environment"
+adapter = "alfworld"
+stateful = true
+
+# Rollout group: G = 5 independent Director rollouts per task.
+[r2orch.siblings]
+independent_siblings = 5
+rollout_workers = 120
+job_order = "longest_first"
+# Wall-time boxes: a rollout that exceeds its box is stopped at its next Worker call and recorded as failed
+# (it is not re-run).
+aime_rollout_wall_time_s = 360.0
+alfworld_rollout_wall_time_s = 360.0
+rollout_wall_time_s = 400.0
+
+# Skill Withdrawal.  Each group is split at random into a hidden part (n_h = 3 rollouts, the candidate skill k is
+# removed from the context) and a visible part (n_v = 2); k is chosen by a Thompson draw from the skill ledger.
+# The ledger keeps a Bayesian-bootstrap posterior of each skill's benefit Delta_k from the paired contrasts and
+#   withdraws a skill when n_k >= min_tasks and E[Delta_k^+] <= epsilon,
+#   admits a new skill when Pr(Delta_k <= 0) <= admit_quantile,
+#   reinstates a withdrawn skill when its windowed q05(Delta_k) > 0 and E[Delta_k^+] > epsilon.
+# Decisions read the last window_cycles cycles; audit_share of the tasks of a scope with withdrawn skills
+# re-test one of them.
+# Recursive Learnability (Proposer reward R_P, proposer_reward.arms_bell_reward): gamma, endpoint_penalty
+# and shrink_strength are gamma, lambda_P and m of R_P; the reward is also multiplied by
+# (mean task duration of the dataset / duration of the task) ** time_exponent, i.e. progress per unit of compute.
+[r2orch.arms]
+hidden = 3
+visible = 2
+epsilon = 0.02
+admit_quantile = 0.05
+min_tasks = 12
+bootstrap_draws = 2000
+gamma = 0.5
+endpoint_penalty = 0.2
+shrink_strength = 2.0
+time_exponent = 0.5
+window_cycles = 30
+audit_share = 0.3
+reinstate_quantile = 0.05
+
+# Worker cost in the Director's reward u = correctness - lambda * worker_cost.  worker_cost =
+# (sum token_in * c_in + sum token_out * c_out) / reference(dataset), recorded for every rollout.  Only the
+# Director's advantage sees the cost; the Proposer reward and the skill ledger use 0/1 correctness.
+[r2orch.cost]
+lambda = 0.005
+c_in = 0.25
+c_out = 1.0
+default_reference_tokens = [5000, 1000]
+
+# Reference solve per dataset, [input tokens, output tokens]; ALFWorld's unit is one episode.
+[r2orch.cost.reference_tokens]
+aime = [14000, 8400]
+hotpotqa = [6800, 430]
+nq_open = [5000, 540]
+medqa = [4500, 920]
+mbppplus = [1650, 290]
+alfworld = [103000, 3260]
+
+# Proposer: 2 lists of 8 candidates per dataset and cycle (4 from the ADS curriculum, 4 by TSDS similarity),
+# 2 picks per list.  The second pick is drawn again from the policy restricted to the other candidates when it
+# repeats the first.  Pairwise policy gradient (each pick is the other's baseline; advantage = half the reward
+# difference, scaled to unit RMS over the batch) with a KL anchor to the untrained reference.
+[r2orch.proposer]
+candidates_per_list = 8
+ads_candidates = 4
+tsds_candidates = 4
+lists_per_dataset = 2
+label_alphabet = "ABCDEFGH"
+temperature = 1.0
+second_pick = "distinct"
+optimizer_steps_per_cycle = 1
+max_grad_norm = 0.0
+kl_beta = 1.0
+gap_clip = 4.0
+
+# Director: group-relative policy gradient with a KL anchor.  Samples whose |advantage| is below
+# low_signal_abs_advantage carry no gradient and are dropped before whitening (a share is kept as KL anchors).
+[r2orch.director]
+low_signal_abs_advantage = 0.05
+low_signal_keep_fraction = 0.15
+tis_cap = 2.0
+kl = 0.005
+whiten_eps = 1e-8
+ppo_mini_batches = 2
+clip_low = 0.2
+clip_high = 0.28
+
+[r2orch.lora]
+rank = 64
+alpha = 64
+dropout = 0.05
+target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+
+[r2orch.serving]
+layout = "4gpu"
+vllm_port = 18600
+vllm_gpu_ids = [0, 1]
+vllm_data_parallel_size = 2
+vllm_gpu_memory_utilization = 0.90
+vllm_max_model_len = 32768
+base_served_name = "r2orch-base"
+proposer_lora_name = "r2orch-proposer"
+director_lora_name = "r2orch-director"
+max_loras = 4
+generation_config = "vllm"
+retrieval_port = 18610
+retrieval_gpu_id = 3
+retrieval_device = "cuda:3"
+director_train_gpu_id = 2
+proposer_train_gpu_id = 3
+
+[r2orch.launch]
+stop_env = "R2ORCH_STOP_AT_EPOCH"
+stop_file = "STOP"
+collect_stop_margin_s = 120.0
+train_stop_margin_s = 480.0
+resume_exit_code = 75
+
+[r2orch.paths]
+run_root = "@RUN_ROOT@"
+runs_dir = "@DATA_ROOT@/runs"
+code_root = "@CODE_ROOT@"
+venv = "@CODE_ROOT@/.venv"
+base_model = "@DATA_ROOT@/models/Qwen3.5-9B"
+e5_model = "@DATA_ROOT@/models/e5-base-v2"
+wiki18_dir = "@DATA_ROOT@/wiki18"
+train_pool = "@CODE_ROOT@/data/r2orch/train/train_pool.jsonl"
+alfworld_data_root = "@DATA_ROOT@/alfworld"
+alfworld_python = "@DATA_ROOT@/envs/alfworld/bin/python"
+evalplus_python = "@DATA_ROOT@/envs/evalplus/bin/python"
+retrieval_service_script = "@CODE_ROOT@/scripts/r2orch/retrieval_service.py"
+
+[models.proposer]
+base_url = "http://127.0.0.1:18600/v1"
+api_key = "EMPTY"
+served_model = "r2orch-proposer"
+base_model_path = "@DATA_ROOT@/models/Qwen3.5-9B"
+checkpoint_path = "@RUN_ROOT@/checkpoints/proposer"
+trainable = true
+enable_thinking = false
+timeout_s = 1200.0
+
+[models.solver]
+base_url = "http://127.0.0.1:18600/v1"
+api_key = "EMPTY"
+served_model = "r2orch-director"
+base_model_path = "@DATA_ROOT@/models/Qwen3.5-9B"
+checkpoint_path = "@RUN_ROOT@/checkpoints/director"
+trainable = true
+enable_thinking = false
+timeout_s = 1200.0
+# Director training rollouts sample at T = 1, top_p = 1, top_k = -1.
+temperature = 1.0
+top_p = 1.0
+top_k = -1
+
+# Workers: the frozen base without LoRA, one route.
+[runtime]
+name = "qwen"
+base_url = "http://127.0.0.1:18600/v1"
+api_key = "EMPTY"
+served_model = "r2orch-base"
+model_path = "@DATA_ROOT@/models/Qwen3.5-9B"
+request_profile = "qwen"
+temperature = 0.3
+enable_thinking = false
+max_tokens = 4096
+max_concurrency = 128
+timeout_s = 1200.0
+managed_locally = false
+self_hosted = true
+frozen = true
+
+[runtime_routing]
+worker_routes = ["qwen"]
+# The skill reviewer (role skill-distiller, T = 0) uses the same frozen base.
+skill_distiller = "qwen"
+
+# Agent-graph canvas: the Director edits the graph with the atomic edits of the paper (AddAgent, SetPrompt, SetModel,
+# SetLayer, ConsiderRelation, DeleteAgent, SetOutput, Finish).
+[canvas]
+# Agents of one layer call their Workers concurrently (scheduling only; results are identical).
+parallel_components_max = 4
+submission_journal_dir = "@RUN_ROOT@/state/submissions"
+max_agents = 6
+max_rounds = 24
+relay_max_chars = 1000
+
+[canvas.submission_protocol_by_dataset]
+aime = "unified_task_result"
+hotpotqa = "unified_task_result"
+nq_open = "unified_task_result"
+medqa = "unified_task_result"
+mbppplus = "unified_task_result"
+alfworld = "unified_task_result"
+
+[canvas.max_total_tokens_by_dataset]
+aime = 240000
+hotpotqa = 240000
+nq_open = 240000
+medqa = 240000
+mbppplus = 240000
+alfworld = 350000
+
+[director]
+prompt_variant = "r2orch"
+
+# Wiki-18 retrieval (E5-base-v2, exact search; scripts/r2orch/serve_retrieval.sh) for NQ-Open, HotpotQA and
+# MedQA; HotpotQA also keeps its distractor passages.  3 hits of at most 600 characters.
+[retrieval]
+enabled = true
+service_url = "http://127.0.0.1:18610/retrieve"
+top_k = 3
+timeout_s = 60.0
+max_tool_rounds = 3
+hotpotqa_search_enabled = true
+passage_chars = 600
+
+# python_exec for AIME and MBPP+ (15 s wall time, 4 GB, 2000 result characters).
+[aime_actions]
+enabled = true
+timeout_s = 15.0
+max_output_chars = 2000
+max_code_chars = 12000
+memory_limit_mb = 4096
+max_initial_calls = 3
+max_revision_calls = 1
+max_total_calls = 4
+
+# ALFWorld episodes run in the interpreter named by r2orch.paths.alfworld_python.
+[alfworld]
+enabled = true
+task_prompt_source = "environment_reset"
+data_root = "@DATA_ROOT@/alfworld/json_2.1.1"
+max_episode_steps = 50
+max_rollout_steps = 200
+max_observation_chars = 12000
+max_initial_calls = 50
+max_revision_calls = 50
+max_total_calls = 100
+
+[verifier]
+mode = "auto"
+
+[trace]
+path = "@RUN_ROOT@/state/traces.jsonl"
+
+# 4gpu layout; render_config.py --layout rewrites these fields.
+[resources]
+proposer_gpu_id = 3
+solver_gpu_id = 2
+allocated_gpu_ids = [0, 1, 2, 3]
+allow_policy_gpu_colocation = false
+
+# Skill library (the scaffold).  Skills are retrieved per task during training only; deployment uses none.
+[solver_skillbank]
+enabled = true
+prompt_token_budget = 3072
+retrieve_top_k = 3
+embedding_model_path = "@DATA_ROOT@/models/e5-base-v2"
+path = "@RUN_ROOT@/state/director_skillbank.json"
+cases_path = "@RUN_ROOT@/state/director_skill_cases.json"
+
+# Outer loop: after the ledger's decisions the editor revises the least helpful skill (REVISE) and distills new
+# skills from groups in which both parts fail (DISTILL), for up to max_reviews_per_cycle scopes per cycle and
+# max_checker_calls_per_cycle editor calls (adapted from PATS; see THIRD_PARTY_NOTICES.md).
+[solver_skillbank.pats]
+enabled = true
+max_skills = 30
+max_tokens = 4000
+min_groups = 2
+min_evidence_cards = 2
+review_interval = 1
+max_edits = 4
+max_reviews_per_cycle = 3
+max_evidence_groups = 32
+max_policy_lag = 1
+max_review_input_tokens = 20480
+max_checker_calls_per_cycle = 6
+seed_skills_path = "configs/skills/seed_cards.json"
+field_char_limit = 300
+dedup_jaccard = 0.7

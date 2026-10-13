@@ -1,0 +1,114 @@
+[
+  {
+    "card": {
+      "skill_id": "seed_aime_mock_verify",
+      "name": "Independent integer verification",
+      "description": "Compute the integer answer of a competition math problem with one solver and check it with an independent verifier.",
+      "trigger": "The problem asks to compute a sum, count or remainder that is a positive integer.",
+      "plan": "Add a solver agent for the full problem and a verifier agent that recomputes the integer; connect solver to verifier and finish on the verifier.",
+      "pitfall": "Do not let the verifier copy the solver's final integer without recomputing it.",
+      "constraint": "Use only add_agent, set_prompt, set_model qwen, consider_relation and finish.",
+      "kind": "verification",
+      "task_types": [
+        "math"
+      ],
+      "evidence": [
+        "R2Orch human-authored seed"
+      ],
+      "stats": {
+        "usage_count": 0,
+        "helpful_count": 0,
+        "hurt_count": 0,
+        "last_used_step": -1,
+        "creation_step": 0,
+        "is_seed": true
+      }
+    },
+    "required_tools": [],
+    "excluded_task_types": []
+  },
+  {
+    "card": {
+      "skill_id": "seed_aime_mock_python",
+      "name": "Compute with python_exec",
+      "description": "Delegate exact arithmetic of a sum or remainder to a Worker that can run python_exec.",
+      "trigger": "The final integer depends on long arithmetic such as a sum of many integers or a remainder modulo 1000.",
+      "plan": "Ask one task_result agent to compute the sum and the remainder exactly with python_exec and report the integer.",
+      "pitfall": "Do not ask for an estimate when the exact integer can be computed.",
+      "constraint": "Name tools only as Worker capabilities; never prescribe a fixed tool sequence.",
+      "kind": "tool-use",
+      "task_types": [
+        "math"
+      ],
+      "evidence": [
+        "R2Orch human-authored seed"
+      ],
+      "stats": {
+        "usage_count": 0,
+        "helpful_count": 0,
+        "hurt_count": 0,
+        "last_used_step": -1,
+        "creation_step": 0,
+        "is_seed": true
+      }
+    },
+    "required_tools": [],
+    "excluded_task_types": []
+  },
+  {
+    "card": {
+      "skill_id": "seed_medqa_mock_differential",
+      "name": "Differential diagnosis before choosing an option",
+      "description": "For a medical question about a patient, compare every option as a candidate diagnosis before answering.",
+      "trigger": "A medical question lists a patient's symptoms and asks which diagnosis or option is most likely.",
+      "plan": "Add one agent that lists findings supporting and contradicting each option and a final agent that chooses one option letter.",
+      "pitfall": "Do not choose an option from a single symptom while ignoring the others.",
+      "constraint": "The answer is one option letter; keep reasoning in summary.",
+      "kind": "decomposition",
+      "task_types": [
+        "medical_mcq"
+      ],
+      "evidence": [
+        "R2Orch human-authored seed"
+      ],
+      "stats": {
+        "usage_count": 0,
+        "helpful_count": 0,
+        "hurt_count": 0,
+        "last_used_step": -1,
+        "creation_step": 0,
+        "is_seed": true
+      }
+    },
+    "required_tools": [],
+    "excluded_task_types": []
+  },
+  {
+    "card": {
+      "skill_id": "seed_medqa_mock_search",
+      "name": "Search a disputed medical fact",
+      "description": "When two options for the patient stay plausible, let a Worker search the medical fact that separates them.",
+      "trigger": "Two options remain plausible for the question after comparing the patient's findings.",
+      "plan": "Give a researcher agent the specific fact to search, then connect it to the agent that chooses the option.",
+      "pitfall": "Do not search the whole question text; search the one distinguishing fact.",
+      "constraint": "Search results are evidence, not the answer.",
+      "kind": "tool-use",
+      "task_types": [
+        "medical_mcq"
+      ],
+      "evidence": [
+        "R2Orch human-authored seed"
+      ],
+      "stats": {
+        "usage_count": 0,
+        "helpful_count": 0,
+        "hurt_count": 0,
+        "last_used_step": -1,
+        "creation_step": 0,
+        "is_seed": true
+      }
+    },
+    "required_tools": [],
+    "excluded_task_types": []
+  }
+]

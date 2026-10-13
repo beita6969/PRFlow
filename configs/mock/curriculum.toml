@@ -1,0 +1,22 @@
+# Curriculum profile of the offline mock (configs/mock/r2orch_mock.toml).
+[curriculum]
+name = "r2orch_mock"
+expected_datasets = 2
+tasks_per_cycle = 4
+num_clusters_per_dataset = 2
+active_clusters_per_dataset = 1
+mini_cluster_size = 4
+candidate_count = 8
+task_window = 5
+rollout_workers = 8
+rollouts_per_task = 5
+# Same learnability rules as configs/curriculum/r2orch.toml.
+cluster_weighting = "learnability"
+cluster_floor = 0.2
+cluster_ema = 0.3
+anchor_mode = "coverage_random"
+mini_init = "spread"
+saturated_min_obs = 2
+hopeless_min_obs = 3
+history_window = 48
+learnable_first = true

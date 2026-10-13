@@ -1,0 +1,154 @@
+# R2Orch offline mock: the training loop of configs/r2orch.toml (hidden/visible rollout groups, skill ledger,
+# Recursive Learnability reward, Proposer and Director updates, skill reviewer) on a tiny pool, with mock models
+# and mock_hash rewards.  No GPU, service or model weights are used.  Run scripts/r2orch/mock_cycle.sh.
+
+[r2orch]
+base_seed = 0
+datasets_enabled = ["aime", "medqa"]
+
+[r2orch.datasets.aime]
+task_type = "math"
+verifier = "mock_hash"
+adapter = "aime"
+stateful = false
+
+[r2orch.datasets.medqa]
+task_type = "medical_mcq"
+verifier = "mock_hash"
+adapter = "retrieval_qa"
+stateful = false
+
+[r2orch.siblings]
+independent_siblings = 5
+rollout_workers = 8
+rollout_wall_time_s = 900.0
+
+[r2orch.arms]
+hidden = 3
+visible = 2
+epsilon = 0.02
+admit_quantile = 0.05
+min_tasks = 12
+bootstrap_draws = 2000
+gamma = 0.5
+endpoint_penalty = 0.2
+shrink_strength = 2.0
+time_exponent = 0.5
+window_cycles = 30
+audit_share = 0.3
+reinstate_quantile = 0.05
+
+[r2orch.paths]
+run_root = "@RUN_ROOT@"
+runs_dir = "@RUN_ROOT@/runs"
+code_root = "@RUN_ROOT@/code"
+venv = "@RUN_ROOT@/venv"
+base_model = "@RUN_ROOT@/models/Qwen3.5-9B"
+e5_model = ""
+wiki18_dir = "@RUN_ROOT@/wiki18"
+train_pool = "configs/mock/pool.jsonl"
+alfworld_data_root = "@RUN_ROOT@/alfworld"
+alfworld_python = ""
+evalplus_python = ""
+retrieval_service_script = "@RUN_ROOT@/retrieval_service.py"
+
+[models.proposer]
+base_url = "http://127.0.0.1:18600/v1"
+api_key = "EMPTY"
+served_model = "r2orch-proposer"
+base_model_path = "@RUN_ROOT@/models/Qwen3.5-9B"
+checkpoint_path = "@RUN_ROOT@/checkpoints/proposer"
+trainable = true
+enable_thinking = false
+
+[models.solver]
+base_url = "http://127.0.0.1:18600/v1"
+api_key = "EMPTY"
+served_model = "r2orch-director"
+base_model_path = "@RUN_ROOT@/models/Qwen3.5-9B"
+checkpoint_path = "@RUN_ROOT@/checkpoints/director"
+trainable = true
+enable_thinking = false
+temperature = 1.0
+top_p = 1.0
+top_k = -1
+
+[runtime]
+name = "qwen"
+base_url = "http://127.0.0.1:18600/v1"
+api_key = "EMPTY"
+served_model = "r2orch-base"
+request_profile = "qwen"
+temperature = 0.3
+enable_thinking = false
+max_tokens = 4096
+max_concurrency = 128
+managed_locally = false
+frozen = true
+
+[runtime_routing]
+worker_routes = ["qwen"]
+skill_distiller = "qwen"
+
+[canvas]
+submission_journal_dir = "@RUN_ROOT@/state/submissions"
+max_agents = 4
+max_rounds = 24
+relay_max_chars = 1000
+
+[canvas.submission_protocol_by_dataset]
+aime = "unified_task_result"
+medqa = "unified_task_result"
+
+[canvas.max_total_tokens_by_dataset]
+aime = 240000
+medqa = 240000
+
+[director]
+prompt_variant = "r2orch"
+
+# The tools are built but the mock Worker never calls them.
+[retrieval]
+enabled = true
+service_url = "http://127.0.0.1:18610/retrieve"
+top_k = 3
+max_tool_rounds = 3
+passage_chars = 600
+
+[aime_actions]
+enabled = true
+timeout_s = 15.0
+max_output_chars = 2000
+memory_limit_mb = 4096
+
+[verifier]
+mode = "auto"
+
+[trace]
+path = "@RUN_ROOT@/state/traces.jsonl"
+
+[solver_skillbank]
+enabled = true
+prompt_token_budget = 1024
+retrieve_top_k = 3
+# No encoder: lexical ranking; the mock seed skills share words with the mock prompts.
+embedding_model_path = ""
+path = "@RUN_ROOT@/state/director_skillbank.json"
+cases_path = "@RUN_ROOT@/state/director_skill_cases.json"
+
+[solver_skillbank.pats]
+enabled = true
+max_skills = 30
+max_tokens = 2000
+min_groups = 2
+min_evidence_cards = 2
+review_interval = 1
+max_edits = 4
+max_reviews_per_cycle = 3
+max_evidence_groups = 32
+max_policy_lag = 1
+max_review_input_tokens = 20480
+max_checker_calls_per_cycle = 6
+seed_skills_path = "configs/mock/seed_cards.json"
+field_char_limit = 300
+dedup_jaccard = 0.7

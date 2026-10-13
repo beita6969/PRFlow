@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+
+# Runs, models and caches
+runs/
+state/
+checkpoints/
+*.safetensors
+*.pt
+*.bin
+.cache/
+
+.DS_Store

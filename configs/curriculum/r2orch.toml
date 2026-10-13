@@ -1,0 +1,34 @@
+# Curriculum profile of configs/r2orch.toml: the ADS curriculum and the TSDS retriever that fill the Proposer's
+# candidate lists on the six benchmarks.
+[curriculum]
+name = "r2orch"
+expected_datasets = 6
+tasks_per_cycle = 12
+num_clusters_per_dataset = 16
+active_clusters_per_dataset = 2
+mini_cluster_size = 8
+candidate_count = 8
+task_window = 13
+rollout_workers = 56
+rollouts_per_task = 5
+boundary_eps = 0.17
+alpha = 0.3
+cooldown_per_dataset = 64
+nominal_epoch_cycles = 0
+# Cluster probability follows an EMA of the mean task learnability 4 rho (1 - rho); cluster_floor of the mass stays
+# uniform so that no cluster starves.
+cluster_weighting = "learnability"
+cluster_floor = 0.2
+cluster_ema = 0.3
+# Anchors: seeded, cluster-weighted draws over the whole pool, least-selected task first.
+anchor_mode = "coverage_random"
+# Boundary mini-clusters start spread over the whole difficulty range.
+mini_init = "spread"
+# A task with >= 2 all-correct (>= 3 all-wrong) groups of >= 2 rollouts within the last history_window cycles leaves
+# the candidates and the anchors unless the pool is thin.
+saturated_min_obs = 2
+hopeless_min_obs = 3
+history_window = 48
+# Among the boundary candidates, tasks whose last group was mixed come first (plus a revisit slot for learnable tasks
+# from any cluster), then never-observed tasks.
+learnable_first = true

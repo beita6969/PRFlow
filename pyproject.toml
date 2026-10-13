@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "r2orch"
+version = "0.1.0"
+description = "R²Orch: recursive self-improvement for agent orchestration via self-play within a skill-internalization loop"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["jsonschema>=4.23", "numpy>=1.26", "openai>=1.0", "sympy>=1.12"]
+
+[project.optional-dependencies]
+train = ["torch>=2.6", "transformers>=5.15,<6", "accelerate>=1.0", "peft>=0.20"]
+serve = ["vllm>=0.27,<0.28"]
+ads = ["scikit-learn>=1.4"]
+# scripts/r2orch/build_ood.py (the SWE-Bench and WebShop parts also read large JSON files incrementally with ijson)
+data = ["pyarrow>=15", "ijson>=3"]
+# Installed in the separate ALFWorld interpreter (r2orch.paths.alfworld_python), see README.md.
+alfworld = ["alfworld>=0.4.2", "pyyaml", "textworld[pddl]>=1.6.1"]
+
+[project.scripts]
+r2orch = "r2orch.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
